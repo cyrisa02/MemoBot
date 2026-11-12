@@ -1,23 +1,22 @@
-import { pipeline } from "@huggingface/transformers";
+import { pipeline, env } from "@huggingface/transformers";
+
+// Configuration CRUCIALE pour Vercel
+env.useBrowserCache = false;
+env.allowLocalModels = false;
+// Force l'utilisation du backend WASM (onnxruntime-web) au lieu du natif
+// @ts-ignore
+env.backends.onnx.wasm = true; 
 
 let extractor: any = null;
 
-// On ajoute un paramètre "type" pour savoir si c'est une question ou un document
 export async function getEmbedding(text: string, type: "query" | "passage" = "passage"): Promise<number[]> {
   try {
     if (!extractor) {
+      // On s'assure que le pipeline utilise bien le backend WASM
       extractor = await pipeline("feature-extraction", "Xenova/multilingual-e5-small", {
         dtype: "q8",
+        // @ts-ignore
+        device: 'wasm', // Force le device WASM
       });
     }
-
-    // On ajoute le préfixe recommandé par le modèle
-    const formattedText = `${type}: ${text}`;
-
-    const output = await extractor(formattedText, { pooling: "mean", normalize: true });
-    return Array.from(output.data);
-  } catch (error) {
-    console.error("Erreur Embedding Local:", error);
-    throw error;
-  }
-}
+    // ... suite de ton code
