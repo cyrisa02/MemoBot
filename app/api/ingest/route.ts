@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     if (docError) throw docError;
 
     // 3. Découper le texte
-    const chunks = chunkText(pdfText, 500);
+    const chunks = chunkText(pdfText, 300);
 
     // 4. Générer les embeddings et insérer les chunks (en parallèle)
     const insertPromises = chunks.map(async (chunk) => {

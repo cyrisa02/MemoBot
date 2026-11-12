@@ -16,7 +16,7 @@ export default function ChatPage() {
     const userMessage = { role: "user", content: question };
     
     // On sauvegarde l'historique AVANT d'ajouter la nouvelle question
-    const chatHistory = messages.slice(-4); 
+    const chatHistory = messages.slice(-2); 
     
     setMessages((prev) => [...prev, userMessage]);
     setQuestion("");
@@ -59,7 +59,7 @@ export default function ChatPage() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-blue-600">MemoBot PME</h1>
+          <h1 className="text-xl font-bold text-blue-600">MemoBot ESSOR - TEST</h1>
           <p className="text-xs text-gray-500">Votre assistant interne sécurisé</p>
         </div>
         <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
