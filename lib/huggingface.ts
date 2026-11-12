@@ -1,13 +1,12 @@
 import { pipeline, env } from "@huggingface/transformers";
 
 // Configuration CRUCIALE pour Vercel (Serverless)
-env.useBrowserCache = false;
-env.allowLocalModels = false;
-
-// Force la priorité WASM AVANT toute initialisation du pipeline
-// Cela empêche la librairie de chercher onnxruntime-node (binaires natifs)
+env.allowLocalModels = false; // Empêche le chargement de fichiers .node natifs
 // @ts-ignore
-env.backends.setPriority(['wasm', 'cpu']);
+if (env.backends.onnx.wasm) {
+  // Limite à 1 thread pour éviter les problèmes de mémoire en serverless
+  env.backends.onnx.wasm.numThreads = 1;
+}
 
 let extractor: any = null;
 
@@ -16,8 +15,7 @@ export async function getEmbedding(text: string, type: "query" | "passage" = "pa
     if (!extractor) {
       extractor = await pipeline("feature-extraction", "Xenova/multilingual-e5-small", {
         dtype: "q8",
-        // @ts-ignore
-        device: 'wasm',
+        device: 'cpu', // 'cpu' + allowLocalModels=false = WASM sur Vercel
       });
     }
 
