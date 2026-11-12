@@ -6,6 +6,7 @@ env.allowLocalModels = false;
 
 // Force la priorité WASM AVANT toute initialisation du pipeline
 // Cela empêche la librairie de chercher onnxruntime-node (binaires natifs)
+// @ts-ignore
 env.backends.setPriority(['wasm', 'cpu']);
 
 let extractor: any = null;
