@@ -1,22 +1,34 @@
-import { HfInference } from "@huggingface/inference";
-
-const hf = new HfInference(process.env.HF_TOKEN);
-
 export async function getEmbedding(text: string, type: "query" | "passage" = "passage"): Promise<number[]> {
+  const apiKey = process.env.JINA_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("JINA_API_KEY est introuvable dans les variables d'environnement");
+  }
+
   try {
-    // On utilise un modèle d'embedding standard et gratuit via l'API
-    const result = await hf.featureExtraction({
-      model: "sentence-transformers/all-MiniLM-L6-v2",
-      inputs: `${type}: ${text}`, // On garde les préfixes pour la qualité
+    const response = await fetch("https://api.jina.ai/v1/embeddings", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "jina-embeddings-v3",
+        input: [`${type}: ${text}`],
+        dimensions: 768 // On force 768 dimensions pour garder ta table Supabase actuelle
+      })
     });
 
-    // L'API peut renvoyer un tableau de tableaux ou un tableau simple
-    if (Array.isArray(result[0])) {
-      return result[0] as number[];
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Erreur API Jina:", errorData);
+      throw new Error(errorData.detail || "Erreur lors de l'appel à Jina AI");
     }
-    return result as number[];
+
+    const data = await response.json();
+    return data.data[0].embedding;
   } catch (error) {
-    console.error("Erreur API Hugging Face:", error);
+    console.error("Erreur Embedding Jina:", error);
     throw error;
   }
 }

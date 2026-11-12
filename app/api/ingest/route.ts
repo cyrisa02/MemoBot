@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-// @ts-expect-error - pdf-parse n'a pas de types pour cet import interne
-import pdf from "pdf-parse/lib/pdf-parse.js";
-import { createClient } from "@supabase/supabase-js";
-import { getEmbedding } from "@/lib/huggingface";
 import { extractText } from "unpdf";
+import { createClient } from "@supabase/supabase-js";
+import { getEmbedding } from "@/lib/huggingface"; // On garde le même chemin
+
+
 
 // Client Admin Supabase (côté serveur uniquement)
 const supabaseAdmin = createClient(
