@@ -1,30 +1,22 @@
-import { pipeline, env } from "@huggingface/transformers";
+import { HfInference } from "@huggingface/inference";
 
-// Configuration CRUCIALE pour Vercel (Serverless)
-env.allowLocalModels = false; // Empêche le chargement de fichiers .node natifs
-// @ts-ignore
-if (env.backends.onnx.wasm) {
-  // Limite à 1 thread pour éviter les problèmes de mémoire en serverless
-  env.backends.onnx.wasm.numThreads = 1;
-}
-
-let extractor: any = null;
+const hf = new HfInference(process.env.HF_TOKEN);
 
 export async function getEmbedding(text: string, type: "query" | "passage" = "passage"): Promise<number[]> {
   try {
-    if (!extractor) {
-      extractor = await pipeline("feature-extraction", "Xenova/multilingual-e5-small", {
-        dtype: "q8",
-        device: 'cpu', // 'cpu' + allowLocalModels=false = WASM sur Vercel
-      });
-    }
+    // On utilise un modèle d'embedding standard et gratuit via l'API
+    const result = await hf.featureExtraction({
+      model: "sentence-transformers/all-MiniLM-L6-v2",
+      inputs: `${type}: ${text}`, // On garde les préfixes pour la qualité
+    });
 
-    const formattedText = `${type}: ${text}`;
-    const output = await extractor(formattedText, { pooling: "mean", normalize: true });
-    
-    return Array.from(output.data);
+    // L'API peut renvoyer un tableau de tableaux ou un tableau simple
+    if (Array.isArray(result[0])) {
+      return result[0] as number[];
+    }
+    return result as number[];
   } catch (error) {
-    console.error("Erreur Embedding Local:", error);
+    console.error("Erreur API Hugging Face:", error);
     throw error;
   }
 }
