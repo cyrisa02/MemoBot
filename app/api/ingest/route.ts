@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { extractText } from "unpdf";
+import { parse } from "@iyulab/unpdf";
 import { createClient } from "@supabase/supabase-js";
-import { getEmbedding } from "@/lib/huggingface"; // On garde le même chemin
+import { getEmbedding } from "@/lib/huggingface";
 
-
+// Autorise Vercel à laisser tourner la fonction jusqu'à 60s (max sur Hobby)
+export const maxDuration = 60;
 
 // Client Admin Supabase (côté serveur uniquement)
 const supabaseAdmin = createClient(
@@ -36,10 +37,17 @@ export async function POST(req: Request) {
 
     if (!file) return NextResponse.json({ error: "Aucun fichier" }, { status: 400 });
 
-    // 1. Extraire le texte du PDF
+    // 1. Extraire le texte du PDF en Markdown
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const { text: pdfText } = await extractText(new Uint8Array(buffer), { mergePages: true });
+    
+    // Utilisation de la nouvelle librairie pour obtenir du Markdown
+    const pdfDoc = parse(new Uint8Array(buffer));
+    const markdownText = pdfDoc.toMarkdown(); 
+
+    if (!markdownText || markdownText.trim().length === 0) {
+      return NextResponse.json({ error: "Le PDF ne contient pas de texte extractible." }, { status: 400 });
+    }
 
     // 2. Insérer le document dans Supabase
     const { data: docData, error: docError } = await supabaseAdmin
@@ -50,20 +58,29 @@ export async function POST(req: Request) {
 
     if (docError) throw docError;
 
-    // 3. Découper le texte
-    const chunks = chunkText(pdfText, 300);
+    // 3. Découper le texte Markdown
+    // On peut garder 1000 caractères, le Markdown étant plus structuré
+    const chunks = chunkText(markdownText, 1000);
 
-    // 4. Générer les embeddings et insérer les chunks (en parallèle)
-    const insertPromises = chunks.map(async (chunk) => {
+    // 4. Générer les embeddings et insérer les chunks
+    // On fait une boucle séquentielle (for) plutôt que Promise.all 
+    // pour éviter de saturer l'API Jina et de dépasser son rate limit
+    for (const chunk of chunks) {
       const embedding = await getEmbedding(chunk, "passage");
-      return supabaseAdmin.from("document_sections").insert({
-        document_id: docData.id,
-        content: chunk,
-        embedding: embedding, // Vecteur de 384 dimensions
-      });
-    });
+      
+      const { error: insertError } = await supabaseAdmin
+        .from("document_sections")
+        .insert({
+          document_id: docData.id,
+          content: chunk,
+          embedding: embedding,
+        });
 
-    await Promise.all(insertPromises);
+      if (insertError) {
+        console.error("Erreur insertion chunk:", insertError);
+        // On continue quand même pour ne pas tout bloquer
+      }
+    }
 
     return NextResponse.json({ 
       success: true, 
@@ -71,7 +88,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error(error);
+    console.error("Erreur d'ingestion:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
