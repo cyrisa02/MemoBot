@@ -1,13 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { createClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+// On initialise Supabase pour le client (côté navigateur)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function ChatPage() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<{ role: string; content: string; sources?: string[] }[]>([]);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,7 +30,7 @@ export default function ChatPage() {
     const userMessage = { role: "user", content: question };
     
     // On sauvegarde l'historique AVANT d'ajouter la nouvelle question
-    const chatHistory = messages.slice(-2); 
+    const chatHistory = messages.slice(-4); 
     
     setMessages((prev) => [...prev, userMessage]);
     setQuestion("");
@@ -28,7 +42,7 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           question: userMessage.content,
-          history: chatHistory // On envoie l'historique à l'API
+          history: chatHistory 
         }),
       });
 
@@ -59,11 +73,19 @@ export default function ChatPage() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-blue-600">MemoBot ESSOR - TEST</h1>
+          <h1 className="text-xl font-bold text-blue-600">MemoBot PME</h1>
           <p className="text-xs text-gray-500">Votre assistant interne sécurisé</p>
         </div>
-        <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
-          MB
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={handleLogout} 
+            className="text-sm text-gray-500 hover:text-red-500 transition-colors"
+          >
+            Déconnexion
+          </button>
+          <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">
+            MB
+          </div>
         </div>
       </header>
 
@@ -85,11 +107,12 @@ export default function ChatPage() {
                   ? "bg-blue-600 text-white rounded-tr-sm" 
                   : "bg-white border border-gray-200 text-gray-800 rounded-tl-sm"
               }`}>
-                <div className="prose prose-sm max-w-none prose-blue">
-  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-    {msg.content}
-  </ReactMarkdown>
-</div>
+                {/* On utilise ReactMarkdown pour formater les réponses de l'IA */}
+                <div className={`prose prose-sm max-w-none ${msg.role === "user" ? "text-white prose-invert" : "text-gray-800"}`}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.content}
+                  </ReactMarkdown>
+                </div>
                 
                 {/* Affichage des sources */}
                 {msg.sources && msg.sources.length > 0 && (
