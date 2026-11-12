@@ -11,7 +11,7 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { question } = await req.json();
+    const { question,  history  } = await req.json();
 
     if (!question) return NextResponse.json({ error: "Question vide" }, { status: 400 });
 
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     const context = sections.map((s: any) => s.content).join("\n\n---\n\n");
 
     // 5. Générer la réponse avec Groq
-    const answer = await generateAnswer(question, context);
+    const answer = await generateAnswer(question, context, history || []);
 
     // 6. Récupérer les noms des documents sources
     const documentIds = [...new Set(sections.map((s: any) => s.document_id))];

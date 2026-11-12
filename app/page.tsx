@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function ChatPage() {
   const [question, setQuestion] = useState("");
@@ -12,6 +14,10 @@ export default function ChatPage() {
     if (!question.trim()) return;
 
     const userMessage = { role: "user", content: question };
+    
+    // On sauvegarde l'historique AVANT d'ajouter la nouvelle question
+    const chatHistory = messages.slice(-4); 
+    
     setMessages((prev) => [...prev, userMessage]);
     setQuestion("");
     setLoading(true);
@@ -20,7 +26,10 @@ export default function ChatPage() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: userMessage.content }),
+        body: JSON.stringify({ 
+          question: userMessage.content,
+          history: chatHistory // On envoie l'historique à l'API
+        }),
       });
 
       const data = await response.json();
@@ -45,8 +54,7 @@ export default function ChatPage() {
   };
 
   return (
-    // Le conteneur principal prend toute la hauteur de l'écran
-    <div className="flex flex-col h-screen bg-gray-100 font-sans text-gray-800">
+    <div className="flex flex-col h-screen bg-gray-50 font-sans text-gray-800">
       
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm flex items-center justify-between">
@@ -77,13 +85,21 @@ export default function ChatPage() {
                   ? "bg-blue-600 text-white rounded-tr-sm" 
                   : "bg-white border border-gray-200 text-gray-800 rounded-tl-sm"
               }`}>
-                <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                <div className="prose prose-sm max-w-none prose-blue">
+  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+    {msg.content}
+  </ReactMarkdown>
+</div>
                 
                 {/* Affichage des sources */}
                 {msg.sources && msg.sources.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500 flex items-center gap-2">
-                    <span className="bg-gray-100 px-2 py-1 rounded font-medium">Sources</span>
-                    <span>{msg.sources.join(", ")}</span>
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2 items-center">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Sources :</span>
+                    {msg.sources.map((source, i) => (
+                      <span key={i} className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded-md border border-blue-100 flex items-center gap-1">
+                        📄 {source}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>
