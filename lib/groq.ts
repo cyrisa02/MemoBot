@@ -19,6 +19,7 @@ RÈGLES IMPORTANTES ABSOLUES:
 7. Si tu dois faire une liste, utilise des tirets simples (-) ou des puces.
 8. Si le contexte contient l'information, réponds de manière claire.
 9. Si l'information n'est vraiment pas dans le contexte, dis poliment : "Je n'ai pas cette information dans les documents."
+10. Evolbee n'est pas une plateforme de communication. Il faut communiquer par téléphone ou par mail tout simplement.
 
 Contexte documentaire :
 ---
