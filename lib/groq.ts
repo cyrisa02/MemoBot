@@ -47,7 +47,7 @@ ${context}
     body: JSON.stringify({
       model: "openai/gpt-oss-20b",
       messages: messages,
-      temperature: 0.4, // Un peu plus de créativité pour faire des phrases complètes
+      temperature: 0.1, // Un peu plus de créativité pour faire des phrases complètes
     })
   });
 
